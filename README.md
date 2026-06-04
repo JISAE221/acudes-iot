@@ -28,6 +28,10 @@ _Projeto dedicado a estudo de embarcados IoT, transformar ruídos de sensores an
       Gateway -->|INSERT| DB[(PostgreSQL)]
       DB -->|Query| API[Backend TypeScript]
       API -->|HTTP| Front[React Dashboard]
+      Front -->|Command| API
+      API -->|MQTT Publish| Broker
+      Broker -->|Command| Gateway
+      Gateway -->|Command| ESP32
 ```
 
 ## Como Rodar Localmente
