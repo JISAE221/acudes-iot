@@ -1,18 +1,26 @@
+# Declare os objetos pgdata e pgnet na raiz do arquivo, fora do services. 
+# Sem isso o Docker nao sabe criar o volume nomeado sem a rede.
+
+volumes:
+  pgdata:
+networks:
+  pgnet:
 services:
+
   postgres:
     image: postgres:17-alpine
     container_name: pg-estudos
     restart: unless-stopped # sobe automatico, mas para se voce parar manualmente
     env_file: .env # le segredos do .env
     ports:
-      - "``${POSTGRES_PORT}"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data # volume nomeado = persistencia
       - ./postgres/init:/docker-entrypoint-initdb.d:ro # scripts de init (readonly)
     networks:
       - pgnet # Rede isolada
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ``${POSTGRES_USER} -d ``${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,5 +30,4 @@ services:
     read_only: false # Postgres precisa escrever em /tmp e /run
     tmpfs:
       - /tmp
-      - /var/run/posgresql # monata em memoria, nao no container layer
-      
+      - /var/run/postgresql # monata em memoria, nao no container layer
