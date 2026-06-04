@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pg-estudos
+    restart: unless-stopped # sobe automatico, mas para se voce parar manualmente
+    env_file: .env # le segredos do .env
+    ports:
+      - "``${POSTGRES_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data # volume nomeado = persistencia
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro # scripts de init (readonly)
+    networks:
+      - pgnet # Rede isolada
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ``${POSTGRES_USER} -d ``${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true  # container nao pode esscalar privilegios
+    read_only: false # Postgres precisa escrever em /tmp e /run
+    tmpfs:
+      - /tmp
+      - /var/run/posgresql # monata em memoria, nao no container layer
+      

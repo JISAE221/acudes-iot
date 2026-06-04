@@ -1,0 +1,5 @@
+.env
+*.log
+pgdata/
+pgadmin-data/
+/docs/TUTOR.md
