@@ -13,7 +13,7 @@ services:
     restart: unless-stopped # sobe automatico, mas para se voce parar manualmente
     env_file: .env # le segredos do .env
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT}:5433"
     volumes:
       - pgdata:/var/lib/postgresql/data # volume nomeado = persistencia
       - ./postgres/init:/docker-entrypoint-initdb.d:ro # scripts de init (readonly)
