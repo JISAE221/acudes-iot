@@ -33,7 +33,7 @@
 - Image vs Build
 - Volume nomeado na raiz
 - Diagrama bidirecional MQTT
-- Diagnostico de porta com Powershell: usados os comandos Get-NetTCPConnection (funcao grosseira e "pegar" a conexao setada pelo LocalPort e verificar com protocolo TCP(_transmission control protocol) a porta indicada).
+- Diagnostico de porta com Powershell: usados os comandos Get-NetTCPConnection (funcao grosseira e "pegar" a conexao setada pelo LocalPort e verificar com protocolo TCP(_transmission control protocol_) a porta indicada).
 Select-Object e selecionar a porta setada, depois vc usa o Owning, qm esta possuindo essa porta, mostrando a OwningProcess(OP), e com esse OP, vc da um Get-Process -Id + OP`s, e ai localizamos quem q esta possuindo a porta.
 -ErrorAction SilentlyContinue (Usado para verificar se a porta esta vazia)
 
