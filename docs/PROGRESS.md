@@ -62,6 +62,39 @@ Select-Object e selecionar a porta setada, depois vc usa o Owning, qm esta possu
   - Não modelar por especulação (Pensei que seria uma boa ideia colocar JSONB, mas é especulação para o uso dos sensores, qualquer coisa eu mudo depois)
   - PK/FK — quem gera valor (PK) vs quem aponta (FK)
   - MAC -> Media Address Control (A "Pessoa" q mora na "Casa"IP)
+  - Identificado que vamos usar Timescale, tabela medicao vira composta
+  - Decisão futura em deixar multivalorado o telefone depois
+
+#### Aprendizados
+**O que são CHUNKS?**
+Chunk = partição interna de uma hypertable, recortada por intervalo de tempo. Cada chunk é uma tabela física separada por baixo dos panos. Você escreve queries como se fosse uma tabela só -> o Timescale roteia automaticamente.
+
+#### Entidades finalizadas no MER&DER.md
+- `dispositivo` — tabela markdown completa + Observações (tipo ENUM customizado, MACADDR8, INET, NULL semântico em `ultimo_contato`)
+- `usuario` — tabela markdown completa + Observações (LGPD sem CPF, senha hash na aplicação, email regex básico, telefone E.164)
+
+#### Decisões técnicas pra `medicao_eletrica` (próxima entidade)
+- **PK:** `BIGSERIAL` (~9.2 quintilhões — sequencial, mais barato que UUID pra time-series)
+- **PK composta:** `(id_medicao_eletrica, medido_em)` — exigência da hypertable do TimescaleDB
+- **Formato:** **tabela larga** (1 linha = 1 amostra completa). Decidido NÃO usar tabela longa: aumentaria volume em 12x e perderia tipagem por grandeza
+- **Timestamps:** 2 — `medido_em` (relógio do sensor) + `recebido_em` (relógio do servidor). Útil quando dispositivo manda buffer offline
+- **Tipo numérico:** decidir grandeza a grandeza entre `NUMERIC(p,s)` (precisão exata) vs `REAL`/`DOUBLE PRECISION` (mais barato, menos preciso)
+- **FK `id_dispositivo`:** `ON DELETE RESTRICT` (histórico de medição é sagrado em sistema industrial)
+- **Atributos:** puxar do `sensor.md` — tensão/corrente/FP por fase (A,B,C), frequência, ângulo, etc.
+
+#### TimescaleDB — onde encontrar (não usar tutorial random)
+- Site: https://www.timescale.com/
+- Docs: https://docs.timescale.com/
+- Repo: https://github.com/timescale/timescaledb
+- Docker Hub: https://hub.docker.com/r/timescale/timescaledb
+- Imagem pro projeto: `timescale/timescaledb:latest-pg16` (combina TimescaleDB + Postgres 16)
+- Versão Community = gratuita e open source (não confundir com Timescale Cloud/Enterprise pagos)
+
+### Próximo passo
+- Esboçar v1 da entidade `medicao_eletrica` usando as decisões acima
+- Puxar atributos exatos do `sensor.md`
+- Continuar com `medicao_agua`, `status_motor`, `status_alimentador`, `evento_alarme`, `usuario_acude`
+- Trocar imagem Docker pra `timescale/timescaledb:latest-pg16` (depois, na hora de criar as tabelas)
 <!-- Template para próximas sessões:
 
 ## Sessão 00X — YYYY-MM-DD
