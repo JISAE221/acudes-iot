@@ -47,6 +47,43 @@ Representa um açude monitorado pelo sistema. É a entidade raiz — todos os di
 - Coordenadas em `NUMERIC(9,6)` permitem precisão de ~10 cm — suficiente para geolocalização de açudes.
 - `status` é `BOOLEAN` por eficiência no banco; a UI faz a tradução (`TRUE` → "Ativo").
 - `ON DELETE RESTRICT` impede que um usuário proprietário seja deletado enquanto possuir açudes cadastrados (proteção contra perda de referência).
-  
+
+
+### Entidade: `dispositivo`
+
+Representa o dispositivo físico instalado em cada açude — pode ser o **monitor principal** ou um dos **módulos de expansão** (partidas, sonda d'água, alimentador). Cada açude pode ter vários dispositivos.
+
+**Tipo customizado necessário** (PostgreSQL exige declarar o ENUM antes da tabela):
+
+```sql
+CREATE TYPE tipo_dispositivo_enum AS ENUM ('MONITOR','PARTIDA','SONDA_AGUA','ALIMENTADOR');
+```
+
+| Coluna              | Tipo                    | Constraints                                                       | Descrição                                                 |
+| ------------------- | ----------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
+| `id_dispositivo`    | `UUID`                  | `PRIMARY KEY DEFAULT gen_random_uuid()`                           | Identificador único do dispositivo                        |
+| `id_acude`          | `UUID`                  | `NOT NULL REFERENCES acude(id_acude) ON DELETE RESTRICT`          | FK para o açude onde está instalado                       |
+| `n_serie`           | `VARCHAR(20)`           | `NOT NULL UNIQUE`                                                 | Número de série de fábrica (único)                        |
+| `endereco_mac`      | `MACADDR8`              | `NOT NULL`                                                        | Endereço MAC (suporta EUI-64)                             |
+| `ip`                | `INET`                  | `NOT NULL`                                                        | Endereço IP do dispositivo na rede                        |
+| `tipo_dispositivo`  | `tipo_dispositivo_enum` | `NOT NULL`                                                        | Tipo do dispositivo (MONITOR, PARTIDA, SONDA_AGUA, ALIMENTADOR) |
+| `data_fabricacao`   | `DATE`                  | `NOT NULL`                                                        | Data de fabricação do hardware                            |
+| `nome_dispositivo`  | `VARCHAR(200)`          | `NOT NULL`                                                        | Nome amigável do dispositivo                              |
+| `instalado_em`      | `TIMESTAMPTZ`           | `NOT NULL DEFAULT NOW()`                                          | Timestamp da instalação em campo                          |
+| `ultimo_contato`    | `TIMESTAMPTZ`           |                                                                   | Timestamp do último heartbeat (`NULL` = nunca se comunicou) |
+| `versao_firmware`   | `VARCHAR(20)`           |                                                                   | Versão do firmware atual (suporte/debug remoto)           |
+| `status`            | `BOOLEAN`               | `NOT NULL DEFAULT TRUE`                                           | `TRUE` = ativo, `FALSE` = inativo                         |
+
+**Observações:**
+- `ON DELETE RESTRICT` impede que um açude seja deletado enquanto possuir dispositivos vinculados — proteção contra perda acidental de histórico em sistema industrial. Para "remover" um dispositivo, usar `status = FALSE` (soft delete).
+- `MACADDR8` (em vez de `MACADDR`) suporta endereços EUI-64, padrão moderno usado em IoT/IPv6.
+- `INET` é tipo nativo do PostgreSQL — valida formato de IP automaticamente e suporta IPv4 e IPv6.
+- `ultimo_contato` admite `NULL` propositalmente: significa "dispositivo cadastrado mas ainda não enviou heartbeat". Forçar `DEFAULT NOW()` mentiria nas queries de monitoramento (ex.: "dispositivos sumidos há mais de 1 dia").
+- `tipo_dispositivo_enum` é declarado com sufixo `_enum` para diferenciar o **tipo** da **coluna** de mesmo nome semântico.
+
+---
+
+
+
 ```mermaid
 ```

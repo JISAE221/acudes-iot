@@ -49,6 +49,18 @@ Select-Object e selecionar a porta setada, depois vc usa o Owning, qm esta possu
 - Criando o Modelo Relacional
 - Aprendi uma coisa importante sobre relacionamentos, cardinalidades e chaves: Quando a cardinalidade é 1:N, a Entidade(1) não precisa de chaves estrangeiras da N, mas Entidade(N) precisa das chaves estrangeiras da 1. N:N; precisa de uma tabela intermediária, que faz o papel do relacionamento. Por fim, 1:1 Em qualquer um dos lados (geralmente no "filho"), adicione a chave estrangeira do "pai".
 
+## Sessão 003 — 2026-06-06
+
+**Fase:** 0 — Docker + PostgreSQL
+
+### O que foi feito
+  - Tipos nativos do Postgres: INET, MACADDR8, UUID, ENUM (CREATE TYPE)
+  - ON DELETE RESTRICT vs CASCADE — integridade
+  industrial
+  - Semântica de NULL — quando ausência tem significado
+  - ENUM vs tabela auxiliar — trade-off
+  - Não modelar por especulação (Pensei que seria uma boa ideia colocar JSONB, mas é especulação para o uso dos sensores, qualquer coisa eu mudo depois)
+  - PK/FK — quem gera valor (PK) vs quem aponta (FK)
 <!-- Template para próximas sessões:
 
 ## Sessão 00X — YYYY-MM-DD
