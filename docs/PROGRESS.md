@@ -61,6 +61,7 @@ Select-Object e selecionar a porta setada, depois vc usa o Owning, qm esta possu
   - ENUM vs tabela auxiliar — trade-off
   - Não modelar por especulação (Pensei que seria uma boa ideia colocar JSONB, mas é especulação para o uso dos sensores, qualquer coisa eu mudo depois)
   - PK/FK — quem gera valor (PK) vs quem aponta (FK)
+  - MAC -> Media Address Control (A "Pessoa" q mora na "Casa"IP)
 <!-- Template para próximas sessões:
 
 ## Sessão 00X — YYYY-MM-DD

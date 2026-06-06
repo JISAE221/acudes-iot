@@ -41,7 +41,7 @@ Representa um açude monitorado pelo sistema. É a entidade raiz — todos os di
 | `status`          | `BOOLEAN`       | `NOT NULL DEFAULT TRUE`                                      | `TRUE` = ativo, `FALSE` = inativo          |
 | `criado_em`       | `TIMESTAMPTZ`   | `NOT NULL DEFAULT NOW()`                                     | Timestamp de criação do registro           |
 | `atualizado_em`   | `TIMESTAMPTZ`   | `NOT NULL DEFAULT NOW()`                                     | Timestamp da última atualização            |
-| `proprietario_id` | `UUID`          | `NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT` | FK para o usuário proprietário do açude    |
+| `id_usuario` | `UUID`          | `NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT` | FK para o usuário proprietário do açude    |
 
 **Observações:**
 - Coordenadas em `NUMERIC(9,6)` permitem precisão de ~10 cm — suficiente para geolocalização de açudes.
@@ -80,6 +80,32 @@ CREATE TYPE tipo_dispositivo_enum AS ENUM ('MONITOR','PARTIDA','SONDA_AGUA','ALI
 - `INET` é tipo nativo do PostgreSQL — valida formato de IP automaticamente e suporta IPv4 e IPv6.
 - `ultimo_contato` admite `NULL` propositalmente: significa "dispositivo cadastrado mas ainda não enviou heartbeat". Forçar `DEFAULT NOW()` mentiria nas queries de monitoramento (ex.: "dispositivos sumidos há mais de 1 dia").
 - `tipo_dispositivo_enum` é declarado com sufixo `_enum` para diferenciar o **tipo** da **coluna** de mesmo nome semântico.
+
+### Entidade: `usuario`
+
+Representa uma pessoa com acesso ao sistema. Pode ser **proprietário** de açudes (referenciada por `acude.proprietario_id`) e/ou possuir vínculo com vários açudes via tabela intermediária `usuario_acude` (N:N — onde mora o perfil de acesso).
+
+| Coluna           | Tipo            | Constraints                                                            | Descrição                                                            |
+| ---------------- | --------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `id_usuario`     | `UUID`          | `PRIMARY KEY DEFAULT gen_random_uuid()`                                | Identificador único do usuário                                       |
+| `nome`           | `VARCHAR(200)`  | `NOT NULL`                                                             | Nome completo do usuário                                             |
+| `email`          | `VARCHAR(200)`  | `NOT NULL UNIQUE CHECK (email ~ '^[^@]+@[^@]+\.[^@]+$')`               | Email de login (validação completa de formato fica na aplicação)     |
+| `telefone`       | `VARCHAR(20)`   | `NOT NULL UNIQUE CHECK (telefone ~ '^\+[1-9]\d{1,14}$')`               | Telefone em formato internacional E.164 (ex: `+5585999990000`)       |
+| `senha`          | `TEXT`          | `NOT NULL`                                                             | Hash da senha (bcrypt/argon2 — hashing feito na aplicação)           |
+| `status`         | `BOOLEAN`       | `NOT NULL DEFAULT TRUE`                                                | `TRUE` = ativo, `FALSE` = inativo (soft delete)                      |
+| `criado_em`      | `TIMESTAMPTZ`   | `NOT NULL DEFAULT NOW()`                                               | Timestamp de criação do registro                                     |
+| `atualizado_em`  | `TIMESTAMPTZ`   | `NOT NULL DEFAULT NOW()`                                               | Timestamp da última atualização                                      |
+| `ultimo_login`   | `TIMESTAMPTZ`   |                                                                        | Timestamp do último login (`NULL` = nunca logou)                     |
+
+**Observações:**
+- **LGPD — CPF intencionalmente omitido:** o sistema não exige CPF para sua função (autenticação por email + senha), portanto não é coletado. Princípio da minimização de dados pessoais.
+- **Senha nunca é armazenada em texto puro.** O hash é gerado na **aplicação** (bcrypt/argon2), nunca no banco. Motivos: (1) separação de responsabilidades; (2) flexibilidade para trocar algoritmo de hash; (3) senha em texto nunca trafega até o banco (logs, traces, dumps).
+- `TEXT` (em vez de `VARCHAR(60)`) acomoda hashes de qualquer algoritmo moderno — bcrypt gera ~60 chars, argon2id pode passar de 100.
+- **Email:** regex no `CHECK` é uma validação básica (existe `@` e `.`). Validação completa (RFC 5322, MX record, etc.) é responsabilidade da aplicação — regex de email "100% correta" é monstruosa e raramente vale a pena no banco.
+- **Telefone em E.164:** padrão internacional (`+` + país + número, até 15 dígitos). Funciona para qualquer país, suporta integração com gateways de SMS/WhatsApp.
+- `ultimo_login` admite `NULL` propositalmente — significa "usuário cadastrado mas nunca logou". Mesma lógica do `dispositivo.ultimo_contato`.
+- Campo de **perfil de acesso** (dono/operador/visualizador) **não** mora aqui — mora na tabela `usuario_acude`, pois o mesmo usuário pode ter perfis diferentes em açudes diferentes.
+
 
 ---
 
