@@ -23,5 +23,59 @@
         - perfil (dono, operador, visualizador...)
         - criado_em
 
+### MER
+
+ ### Entidade: `acude`
+
+  Representa um açude monitorado pelo sistema. É a entidade     raiz — todos os dispositivos, medições e eventos pertencem a   um açude.                                                  
+  | Coluna            | Tipo            | Constraints
+                                           | Descrição
+                            |
+  | ----------------- | --------------- |
+  ------------------------------------------------------------
+   | ------------------------------------------ |
+  | `id_acude`        | `UUID`          | `PRIMARY KEY DEFAULT
+   gen_random_uuid()`                      | Identificador
+  único do açude               |
+  | `nome_acude`      | `VARCHAR(200)`  | `NOT NULL`
+                                           | Nome do açude
+  (ex: "Açude Castanhão")      |
+  | `endereco`        | `VARCHAR(255)`  | `NOT NULL`
+                                           |
+  Endereço/localização descritiva            |
+  | `municipio`       | `VARCHAR(100)`  | `NOT NULL`
+                                           | Município onde o
+  açude está localizado     |
+  | `estado`          | `CHAR(2)`       | `NOT NULL`
+                                           | Sigla do estado
+  (ex: "CE", "PB")           |
+  | `latitude`        | `NUMERIC(9,6)`  | `NOT NULL`
+                                           | Coordenada
+  geográfica (latitude)           |
+  | `longitude`       | `NUMERIC(9,6)`  | `NOT NULL`
+                                           | Coordenada
+  geográfica (longitude)          |
+  | `status`          | `BOOLEAN`       | `NOT NULL DEFAULT
+  TRUE`                                      | `TRUE` = ativo,
+   `FALSE` = inativo          |
+  | `criado_em`       | `TIMESTAMPTZ`   | `NOT NULL DEFAULT
+  NOW()`                                     | Timestamp de
+  criação do registro           |
+  | `atualizado_em`   | `TIMESTAMPTZ`   | `NOT NULL DEFAULT
+  NOW()`                                     | Timestamp da
+  última atualização            |
+  | `proprietario_id` | `UUID`          | `NOT NULL REFERENCES
+   usuario(id_usuario) ON DELETE RESTRICT` | FK para o usuário
+   proprietário do açude    |
+
+  **Observações:**
+  - Coordenadas em `NUMERIC(9,6)` permitem precisão de ~10 cm
+  — suficiente para geolocalização de açudes.
+  - `status` é `BOOLEAN` por eficiência no banco; a UI faz a
+  tradução (`TRUE` → "Ativo").
+  - `ON DELETE RESTRICT` impede que um usuário proprietário
+  seja deletado enquanto possuir açudes cadastrados (proteção
+  contra perda de referência).
+  
 ```mermaid
 ```
