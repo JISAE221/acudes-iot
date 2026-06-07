@@ -55,11 +55,10 @@ Select-Object e selecionar a porta setada, depois vc usa o Owning, qm esta possu
 
 ### O que foi feito
   - Tipos nativos do Postgres: INET, MACADDR8, UUID, ENUM (CREATE TYPE)
-  - ON DELETE RESTRICT vs CASCADE — integridade
-  industrial
+  - ON DELETE RESTRICT vs CASCADE — integridade industrial
   - Semântica de NULL — quando ausência tem significado
   - ENUM vs tabela auxiliar — trade-off
-  - Não modelar por especulação (Pensei que seria uma boa ideia colocar JSONB, mas é especulação para o uso dos sensores, qualquer coisa eu mudo depois)
+  - Não modelar por especulação (Pensei que seria uma boa ideia colocar JSONB, mas especulação para o uso dos sensores, qualquer coisa eu mudo depois)
   - PK/FK — quem gera valor (PK) vs quem aponta (FK)
   - MAC -> Media Address Control (A "Pessoa" q mora na "Casa"IP)
   - Identificado que vamos usar Timescale, tabela medicao vira composta

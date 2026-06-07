@@ -108,6 +108,70 @@ Representa uma pessoa com acesso ao sistema. Pode ser **proprietário** de açud
 
 ### Entidade: `medicao_eletrica`
 
+Armazena leituras elétricas trifásicas enviadas pelo dispositivo monitor. Cada linha representa uma amostra completa do sistema em um instante. Esta entidade é uma **hypertable do TimescaleDB**, particionada por `medido_em`.
+
+**Tipo customizado necessário** (PostgreSQL exige declarar o ENUM antes da tabela):
+
+```sql
+CREATE TYPE tipo_qualidade_enum AS ENUM ('OK','SUSPECT','BAD','INTERPOLATED');
+```
+
+| Coluna                | Tipo                  | Constraints                                                          | Descrição                                                             |
+| --------------------- | --------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `id_medicao_eletrica` | `BIGSERIAL`           | parte da PK composta                                                 | Identificador sequencial da medição                                   |
+| `id_dispositivo`      | `UUID`                | `NOT NULL REFERENCES dispositivo(id_dispositivo) ON DELETE RESTRICT` | FK para o dispositivo que enviou a leitura                            |
+| `medido_em`           | `TIMESTAMPTZ`         | `NOT NULL` (parte da PK composta)                                    | Timestamp da leitura no relógio do sensor                             |
+| `recebido_em`         | `TIMESTAMPTZ`         | `NOT NULL DEFAULT NOW()`                                             | Timestamp do recebimento no servidor                                  |
+| `tensao_a`            | `REAL`                |                                                                      | Tensão da fase A em volts (`NULL` = sensor falhou)                    |
+| `tensao_b`            | `REAL`                |                                                                      | Tensão da fase B em volts (`NULL` = sensor falhou)                    |
+| `tensao_c`            | `REAL`                |                                                                      | Tensão da fase C em volts (`NULL` = sensor falhou)                    |
+| `corrente_a`          | `REAL`                |                                                                      | Corrente da fase A em ampères (`NULL` = sensor falhou)                |
+| `corrente_b`          | `REAL`                |                                                                      | Corrente da fase B em ampères (`NULL` = sensor falhou)                |
+| `corrente_c`          | `REAL`                |                                                                      | Corrente da fase C em ampères (`NULL` = sensor falhou)                |
+| `angulo_a`            | `REAL`                |                                                                      | Ângulo de fase A em graus (`NULL` = sensor falhou)                    |
+| `angulo_b`            | `REAL`                |                                                                      | Ângulo de fase B em graus (`NULL` = sensor falhou)                    |
+| `angulo_c`            | `REAL`                |                                                                      | Ângulo de fase C em graus (`NULL` = sensor falhou)                    |
+| `frequencia`          | `REAL`                |                                                                      | Frequência do sistema em Hz — única para as 3 fases acopladas         |
+| `assimetria`          | `REAL`                |                                                                      | Desequilíbrio entre fases em % — valor único por definição            |
+| `fator_potencia_a`    | `REAL`                |                                                                      | Fator de potência da fase A (entre -1 e 1)                            |
+| `fator_potencia_b`    | `REAL`                |                                                                      | Fator de potência da fase B (entre -1 e 1)                            |
+| `fator_potencia_c`    | `REAL`                |                                                                      | Fator de potência da fase C (entre -1 e 1)                            |
+| `qualidade`           | `tipo_qualidade_enum` | `NOT NULL DEFAULT 'OK'`                                              | Status da amostra (`OK`, `SUSPECT`, `BAD`, `INTERPOLATED`)            |
+
+**Constraints de tabela e cláusula `WITH` (hypertable)** — declaradas após as colunas no `CREATE TABLE`:
+
+```sql
+PRIMARY KEY (id_medicao_eletrica, medido_em),
+CONSTRAINT chk_tensao     CHECK (tensao_a    >= 0 AND tensao_b    >= 0 AND tensao_c    >= 0),
+CONSTRAINT chk_corrente   CHECK (corrente_a  >= 0 AND corrente_b  >= 0 AND corrente_c  >= 0),
+CONSTRAINT chk_angulo     CHECK (angulo_a BETWEEN -180 AND 180
+                              AND angulo_b BETWEEN -180 AND 180
+                              AND angulo_c BETWEEN -180 AND 180),
+CONSTRAINT chk_fp         CHECK (fator_potencia_a BETWEEN -1 AND 1
+                              AND fator_potencia_b BETWEEN -1 AND 1
+                              AND fator_potencia_c BETWEEN -1 AND 1),
+CONSTRAINT chk_freq       CHECK (frequencia >= 0),
+CONSTRAINT chk_assimetria CHECK (assimetria BETWEEN 0 AND 100)
+)
+WITH (
+  timescaledb.hypertable,
+  timescaledb.partition_column = 'medido_em'
+);
+```
+
+**Observações:**
+
+- **Hypertable do TimescaleDB:** a tabela é particionada internamente em **chunks** por intervalo de tempo (default 7 dias). Por isso `medido_em` precisa estar na PK — o TimescaleDB usa essa coluna pra rotear cada insert/query para o chunk correto. Queries por intervalo de tempo se beneficiam de **chunk exclusion** automático.
+- **PK em `BIGSERIAL` (não `UUID`):** time-series tem inserção pesada e índice grande. Sequencial de 8 bytes performa melhor que UUID de 16 bytes. Escolha consciente diferente das entidades de domínio (`acude`, `dispositivo`, `usuario`).
+- **PK composta `(id_medicao_eletrica, medido_em)`:** exigência da hypertable. Em sistema não-time-series, `id_medicao_eletrica` sozinho bastaria.
+- **Dois timestamps por amostra:** `medido_em` é o relógio do sensor (momento real da medição); `recebido_em` é o relógio do servidor. Cobre o caso do dispositivo perder conexão, acumular leituras em buffer local e enviar tudo de uma vez ao reconectar — sem o segundo timestamp seria impossível distinguir "leitura recente" de "buffer offline".
+- **Tabela larga (1 linha = 1 amostra completa):** rejeitada a "tabela longa" (1 linha por grandeza) — multiplicaria as linhas em ~12x, perderia tipagem por grandeza e dificultaria CHECKs específicos.
+- **`NULL` semântico nas grandezas (exceção à regra "NOT NULL por padrão"):** aqui `NULL` carrega significado próprio — "o sensor desta grandeza falhou em ler nesta amostra". Forçar `NOT NULL` obrigaria valor sentinela (`-9999`), poluiria agregações e exigiria filtragem manual em toda query. Com `NULL`, `AVG()` ignora automaticamente e falhas se contam com `COUNT(*) FILTER (WHERE coluna IS NULL)`.
+- **Frequência e assimetria sem `_a/_b/_c`:** em sistema trifásico acoplado, frequência é propriedade do sistema (as três fases giram juntas em mesma frequência, defasadas em 120°). Assimetria é por definição uma medida do desequilíbrio **entre** as fases — não tem sentido elétrico ter "assimetria da fase A".
+- **`REAL` (float 32 bits) em todas as grandezas:** sensor de campo já não tem precisão infinita, e `REAL` economiza metade do espaço vs `DOUBLE PRECISION`. Para 1M+ amostras/dia isso pesa em armazenamento e cache.
+- **Filosofia dos CHECKs — "sanity check", não calibração:** as faixas servem pra rejeitar valor absurdo (sensor com defeito, bug na aplicação), não pra dizer "leitura ótima". Por isso `tensao_a >= 0` em vez de `BETWEEN 200 AND 240` — queda de tensão é o **evento de falha que se quer registrar**, não lixo. Detecção de alarme operacional fica em outra camada (queries de monitoramento ou tabela `evento_alarme`).
+- **Flag `qualidade` única por amostra (não por grandeza):** evita **multicolinearidade** em análises estatísticas/ML — quando o dispositivo inteiro falha, todas as grandezas falham juntas, e três flags separadas seriam features redundantes. Combinada com o `NULL` semântico por grandeza, dá granularidade sem ruído estatístico.
+- **`ON DELETE RESTRICT` em `id_dispositivo`:** histórico de medição é sagrado em sistema industrial — proteção contra perda acidental por deleção do dispositivo que originou os dados.
 
 ---
 
