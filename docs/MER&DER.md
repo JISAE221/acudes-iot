@@ -106,6 +106,8 @@ Representa uma pessoa com acesso ao sistema. Pode ser **proprietário** de açud
 - `ultimo_login` admite `NULL` propositalmente — significa "usuário cadastrado mas nunca logou". Mesma lógica do `dispositivo.ultimo_contato`.
 - Campo de **perfil de acesso** (dono/operador/visualizador) **não** mora aqui — mora na tabela `usuario_acude`, pois o mesmo usuário pode ter perfis diferentes em açudes diferentes.
 
+### Entidade: `medicao_eletrica`
+
 
 ---
 
