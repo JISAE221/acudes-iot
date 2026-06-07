@@ -152,7 +152,7 @@ CONSTRAINT chk_fp         CHECK (fator_potencia_a BETWEEN -1 AND 1
                               AND fator_potencia_c BETWEEN -1 AND 1),
 CONSTRAINT chk_freq       CHECK (frequencia >= 0),
 CONSTRAINT chk_assimetria CHECK (assimetria BETWEEN 0 AND 100)
-)
+
 WITH (
   timescaledb.hypertable,
   timescaledb.partition_column = 'medido_em'

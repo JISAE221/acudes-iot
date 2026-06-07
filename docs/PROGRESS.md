@@ -94,6 +94,13 @@ Chunk = partição interna de uma hypertable, recortada por intervalo de tempo. 
 - Puxar atributos exatos do `sensor.md`
 - Continuar com `medicao_agua`, `status_motor`, `status_alimentador`, `evento_alarme`, `usuario_acude`
 - Trocar imagem Docker pra `timescale/timescaledb:latest-pg16` (depois, na hora de criar as tabelas)
+
+## Sessão 003 — 2026-06-07
+### O que foi feito?
+- Entidade `medicao_eletrica` usando as decisões acima
+- Puxar atributos exatos do `sensor.md`
+- Continuar com `medicao_agua`, `status_motor`, `status_alimentador`, `evento_alarme`, `usuario_acude`
+- Trocar imagem Docker pra `timescale/timescaledb:latest-pg16` (depois, na hora de criar as tabelas)
 <!-- Template para próximas sessões:
 
 ## Sessão 00X — YYYY-MM-DD
